@@ -1,6 +1,5 @@
 node_modules/
 dist/
-.env
 data/uploads/
 data/generated/
 data/postgres/
