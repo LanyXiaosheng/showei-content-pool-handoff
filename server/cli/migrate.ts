@@ -6,6 +6,7 @@ import { logger } from '../lib/logger';
 const INITIAL_VERSION = '001_initial_schema';
 const OPTIONAL_TAGS_VERSION = '002_optional_task_tags';
 const DIANPING_COOKIES_VERSION = '003_dianping_credentials';
+const OPTIONAL_SELLING_POINTS_VERSION = '004_optional_selling_points';
 
 export async function migrate(): Promise<void> {
   await q(`CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -54,6 +55,18 @@ export async function migrate(): Promise<void> {
       await client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [DIANPING_COOKIES_VERSION]);
     });
     logger.info(`数据库迁移完成：${DIANPING_COOKIES_VERSION}`);
+  }
+
+  const optionalSellingPoints = await q<{ version: string }>(
+    'SELECT version FROM schema_migrations WHERE version = $1', [OPTIONAL_SELLING_POINTS_VERSION],
+  );
+  if (!optionalSellingPoints.rows[0]) {
+    await withTx(async (client) => {
+      await client.query('ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_selling_points_check');
+      await client.query("ALTER TABLE tasks ADD CONSTRAINT tasks_selling_points_check CHECK (jsonb_typeof(selling_points) = 'array')");
+      await client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [OPTIONAL_SELLING_POINTS_VERSION]);
+    });
+    logger.info(`数据库迁移完成：${OPTIONAL_SELLING_POINTS_VERSION}`);
   }
 }
 

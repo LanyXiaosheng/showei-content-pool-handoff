@@ -96,7 +96,7 @@ CREATE TABLE tasks (
   failure_reason    text,
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
-  CHECK (jsonb_typeof(selling_points) = 'array' AND jsonb_array_length(selling_points) > 0),
+  CONSTRAINT tasks_selling_points_check CHECK (jsonb_typeof(selling_points) = 'array'),
   CHECK (jsonb_typeof(tags) = 'array'),
   CHECK (status <> 'REJECTED' OR (review_comment IS NOT NULL AND reviewed_at IS NOT NULL)),
   CHECK (status <> 'VOID' OR void_reason IS NOT NULL)

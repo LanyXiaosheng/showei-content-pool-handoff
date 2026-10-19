@@ -92,8 +92,8 @@ async function child() {
     check((await q('SELECT current_database() AS name')).rows[0].name === databaseName, 'connected database mismatch');
     phase = 'database migration and fixture setup';
     await require('/app/dist/server/cli/migrate.js').migrate();
-    const migration = await q('SELECT version FROM schema_migrations WHERE version = $1', ['003_dianping_credentials']);
-    check(migration.rowCount === 1, 'Cookie migration was not applied');
+    const migration = await q("SELECT version FROM schema_migrations WHERE version IN ('003_dianping_credentials','004_optional_selling_points')");
+    check(migration.rowCount === 2, 'latest migrations were not applied');
     const password = randomBytes(12).toString('hex') + 'Aa1!';
     const passwordHash = await hashPassword(password);
     for (const role of ['ADMIN', 'AGENT', 'USER']) {
@@ -101,10 +101,10 @@ async function child() {
         VALUES ($1, $2, $3, $4)`, [`${role.toLowerCase()}@cookie-test.local`, passwordHash, `Cookie Test ${role}`, role]);
     }
     app = await require('/app/dist/server/app.js').buildApp();
-    const api = async (method, url, cookie, payload) => {
+    const api = async (method, url, cookie, payload, extraHeaders = {}) => {
       const response = await app.inject({
         method, url,
-        headers: { origin: 'http://cookie-test.local', ...(cookie ? { cookie } : {}) },
+        headers: { origin: 'http://cookie-test.local', ...extraHeaders, ...(cookie ? { cookie } : {}) },
         ...(payload === undefined ? {} : { payload }),
       });
       noSecrets(response.body);
@@ -211,6 +211,27 @@ async function child() {
     check(checked.last_check_ok === true, 'current version check was not saved');
     process.stdout.write('PASS: administrator test shared parsing and live Cookie replacement\n');
 
+    phase = 'submit task without selling points or tags';
+    const image = fs.readFileSync('/app/fixtures/sample-dish.jpg');
+    const boundary = `----shiwei-optional-fields-${process.pid}`;
+    const fields = {
+      generationCount: '10', sourceTitle: '没有卖点也能提交的探店素材', sourceBody: '', sellingPoints: '[]', tags: '[]',
+    };
+    const parts = [];
+    for (const [name, value] of Object.entries(fields)) {
+      parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`));
+    }
+    parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="images"; filename="dish.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`));
+    parts.push(image, Buffer.from(`\r\n--${boundary}--\r\n`));
+    const taskResponse = await api('POST', '/api/tasks', sessions.USER, Buffer.concat(parts), {
+      'content-type': `multipart/form-data; boundary=${boundary}`,
+    });
+    check(taskResponse.statusCode === 201, 'task with empty optional fields was rejected');
+    const optionalTask = await q('SELECT selling_points, tags FROM tasks WHERE id = $1', [taskResponse.json().data.id]);
+    check(optionalTask.rowCount === 1 && JSON.stringify(optionalTask.rows[0].selling_points) === '[]'
+      && JSON.stringify(optionalTask.rows[0].tags) === '[]', 'empty optional fields were not stored as arrays');
+    process.stdout.write('PASS: task submission with empty selling points and tags\n');
+
     phase = 'clear tombstone and audit checks';
     const cleared = await api('DELETE', maintenance, sessions.ADMIN);
     check(cleared.statusCode === 200 && cleared.json().data.configured === false, 'Cookie clear failed');
@@ -226,8 +247,8 @@ async function child() {
     noSecrets(JSON.stringify(audit.rows));
     check(audit.rows.some((row) => row.action === 'DIANPING_COOKIE_SAVED'), 'save audit missing');
     check(audit.rows.some((row) => row.action === 'DIANPING_COOKIE_CLEARED'), 'clear audit missing');
-    check(Number((await q('SELECT count(*) AS total FROM tasks')).rows[0].total) === 0, 'parsing created a task');
-    process.stdout.write('PASS: version guards clear audit redaction and zero task side effects\n');
+    check(Number((await q('SELECT count(*) AS total FROM tasks')).rows[0].total) === 1, 'unexpected tasks were created');
+    process.stdout.write('PASS: version guards clear audit redaction and optional task side effects\n');
   } finally {
     globalThis.fetch = originalFetch;
     try { if (app) await app.close(); }

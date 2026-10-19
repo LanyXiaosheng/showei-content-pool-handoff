@@ -89,6 +89,45 @@ function firstString(data: DataObject, names: string[]): string {
   return '';
 }
 
+const TAG_SOURCE_KEYS = ['tags', 'tagList', 'keywords', 'topicTags', 'topicTagList', 'hashtags', 'hashTags', 'hashtagList'];
+const TAG_CONTAINER_KEYS = ['items', 'list', 'data', 'records', 'tags', 'tagList', 'hashtags', 'hashTags', 'topicTags', 'topicTagList'];
+
+function collectTagValues(value: unknown, output: string[], depth = 0, seen = new Set<object>()): void {
+  if (output.length >= 48 || depth > 5) return;
+  if (typeof value === 'string') {
+    const tag = text(value).replace(/^[#＃]+/, '').trim();
+    if (tag && tag.length <= 120 && !tag.startsWith('@')) output.push(tag);
+    return;
+  }
+  if (Array.isArray(value)) {
+    if (seen.has(value)) return;
+    seen.add(value);
+    for (const entry of value.slice(0, 100)) collectTagValues(entry, output, depth + 1, seen);
+    return;
+  }
+  const row = object(value);
+  if (!row || seen.has(row)) return;
+  seen.add(row);
+  const direct = ['name', 'tagName', 'text'].map((key) => text(row[key])).find(Boolean);
+  if (direct) {
+    collectTagValues(direct, output, depth + 1, seen);
+    return;
+  }
+  let hasContainer = false;
+  for (const key of TAG_CONTAINER_KEYS) {
+    if (key in row) { hasContainer = true; collectTagValues(row[key], output, depth + 1, seen); }
+  }
+  if (!hasContainer) collectTagValues(row.title, output, depth + 1, seen);
+}
+
+function noteTags(data: DataObject): string[] {
+  const values: string[] = [];
+  for (const key of TAG_SOURCE_KEYS) {
+    if (key in data) collectTagValues(data[key], values);
+  }
+  return values;
+}
+
 function imageUrl(value: unknown, depth = 0): string {
   if (depth > 5) return '';
   if (typeof value === 'string') {
@@ -117,9 +156,7 @@ function candidate(data: DataObject): NoteData {
   for (const name of ['coverUrl', 'cover_url', 'picList', 'imageList', 'images', 'image', 'pictures', 'pics', 'photoList']) {
     coverUrl = imageUrl(data[name]); if (coverUrl) break;
   }
-  const rawTags = data.tags ?? data.tagList ?? data.keywords;
-  const tags = Array.isArray(rawTags) ? rawTags.map((tag) => typeof tag === 'string' ? tag
-    : firstString(object(tag) || {}, ['name', 'title', 'tagName'])).filter(Boolean) : [];
+  const tags = noteTags(data);
   return { title, body, coverUrl, tags };
 }
 
@@ -171,7 +208,7 @@ export function parseDianpingPage(html: string, sourceUrl = ''): NoteData {
     throw new AppError(422, 'DIANPING_CONTENT_INCOMPLETE', '页面未返回完整笔记，请确认 Cookie 有效和笔记可访问，或手动上传素材');
   }
   const hashtags = [...note.body.matchAll(/[#＃]([^#＃\s，。！？、,;:：（）()]{1,60})/gu)].map((match) => match[1]);
-  note.tags = [...new Set([...note.tags, ...hashtags].map((tag) => tag.replace(/^#+/, '').trim())
+  note.tags = [...new Set([...note.tags, ...hashtags].map((tag) => tag.replace(/^[#＃]+/, '').trim())
     .filter((tag) => tag && tag.length <= 120 && !tag.startsWith('@')))].slice(0, 12);
   return note;
 }

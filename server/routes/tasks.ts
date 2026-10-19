@@ -79,7 +79,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
       sourceTitle: fields.sourceTitle,
       sourceBody: fields.sourceBody,
     });
-    const sellingPoints = parseStringArray(fields.sellingPoints, '卖点', 8);
+    const sellingPoints = parseStringArray(fields.sellingPoints, '卖点', 8, false);
     const tags = parseStringArray(fields.tags, '标签', 12, false);
     const task = await createTask(actor, {
       ...parsed,

@@ -18,6 +18,33 @@ test('结构化笔记提取标题正文首图和去重话题', () => {
   assert.equal(result.coverUrl, 'https://p1.meituan.net/ugcpic/fixture.jpg');
 });
 
+test('提取独立话题集合与标签对象字段，忽略评论、推荐和正文块结构', () => {
+  const html = '<script type="application/ld+json">' + JSON.stringify({
+    '@type': 'SocialMediaPosting', id: '123', headline: '周末餐厅体验记录',
+    articleBody: '味道不错，值得再来。#正文话题',
+    image: ['https://p1.meituan.net/ugcpic/fixture.jpg'],
+    topicTags: { items: [
+      { tagName: '#页面话题' }, { name: '页面话题' }, { title: '  #环境不错  ' }, { text: '@不应导入' },
+    ] },
+    hashtags: ['＃性价比高', { name: '服务周到' }],
+    comments: [{ text: '评论里的#评论话题' }],
+    recommendations: [{ hashtags: ['#推荐话题'] }],
+    contentBlocks: [{ text: '#正文结构误识别' }],
+  }) + '</script>';
+  const result = parseDianpingPage(html, 'https://m.dianping.com/feeddetail/123');
+  assert.deepEqual(result.tags, ['页面话题', '环境不错', '性价比高', '服务周到', '正文话题']);
+});
+
+test('标签对象容器只读取标签名字段并清理前缀、重复及@项', () => {
+  const html = '<script type="application/json">' + JSON.stringify({
+    noteId: '123', noteTitle: '周末餐厅体验记录', noteContent: '现场体验记录',
+    imageList: ['https://p1.meituan.net/ugcpic/fixture.jpg'],
+    tagList: { data: [{ name: '##招牌菜' }, { text: '氛围舒适' }, { name: '@账号' }, { label: '不支持的通用字段' }] },
+  }) + '</script>';
+  const result = parseDianpingPage(html, 'https://m.dianping.com/feeddetail/123');
+  assert.deepEqual(result.tags, ['招牌菜', '氛围舒适']);
+});
+
 test('Qwik对象引用按base36解码，数字字符串叶值不会再次解引用且循环安全', () => {
   const data = { objs: [
     { noteTitle: '1', noteContent: '2', imageList: '3', noteId: '5', cycle: '6' },

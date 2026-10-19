@@ -139,7 +139,7 @@ Base URL：`/api`（开发时由 Vite 代理到 `http://127.0.0.1:4100`；生产
 | `generationCount` | 数字 | 10–100 |
 | `sourceTitle` | 字符串 | 原始标题，≤200 |
 | `sourceBody` | 字符串 | 原始正文，可选，≤8000 字；缺省按空字符串处理 |
-| `sellingPoints` | JSON 数组字符串 | 1–8 条，必填 |
+| `sellingPoints` | JSON 数组字符串 | 可选，0–8 条；缺省按空数组保存 |
 | `tags` | JSON 数组字符串 | 原始话题标签，可选，0–12 条；缺省按空数组处理 |
 | `images` | 文件（可多个） | 1–6 张，JPG/PNG/WebP，每张 ≤12MB |
 

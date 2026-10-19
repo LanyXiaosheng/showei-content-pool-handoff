@@ -82,7 +82,7 @@ erDiagram
 | `sessions` | 不透明会话令牌哈希 | token_hash 唯一；过期时间索引 |
 | `invites` | 邀请码、有效期、次数、撤销 | code 唯一；`used_count <= max_uses` |
 | `invite_redemptions` | 注册兑换记录 | user_id 唯一 |
-| `tasks` | 素材任务、原文、卖点、状态 | 状态 CHECK；待审部分索引；驳回必须有理由 |
+| `tasks` | 素材任务、原文、可选卖点与标签、状态 | 两个字段始终是 JSON 数组，可为空；状态 CHECK；待审部分索引；驳回必须有理由 |
 | `task_images` | 原图、缩略图、EXIF 已清理 | `(task_id, sha256)` 唯一，同任务不能重复图 |
 | `generation_jobs` | 生成队列与进度 | task_id 唯一；`(status, available_at)` 索引 |
 | `generation_logs` | 逐次 API 重试、校验、状态变化 | task/job 时间索引 |

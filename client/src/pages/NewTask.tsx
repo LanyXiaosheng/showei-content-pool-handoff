@@ -174,7 +174,10 @@ export function NewTask() {
       setTags(parsed.tags);
       setCompliance(false);
       setError(null);
-      toast.success(`已填入标题、首图${parsed.body ? '和正文' : ''}，识别到 ${parsed.tags.length} 个话题标签`);
+      const tagMessage = parsed.tags.length
+        ? `识别到 ${parsed.tags.length} 个话题标签`
+        : '未识别到话题标签，标签可选，也可手动添加';
+      toast.success(`已填入标题、首图${parsed.body ? '和正文' : ''}，${tagMessage}`);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : '大众点评导入失败，请稍后重试');
     } finally {
@@ -185,8 +188,6 @@ export function NewTask() {
   function validate(): string | null {
     if (!images.length) return '请至少上传 1 张原始菜品图';
     if (title.trim().length < 3) return '请填写至少 3 个字的原始标题';
-    const cleanPoints = sellingPoints.map((point) => point.trim()).filter(Boolean);
-    if (!cleanPoints.length) return '请至少填写 1 个卖点';
     if (generationCount < 10 || generationCount > 100) return '生成组数必须在 10 到 100 之间';
     if (!compliance) return '请先确认素材合规与平台分发风险提示';
     return null;
@@ -310,12 +311,12 @@ export function NewTask() {
           <section className="form-section">
             <div className="form-section__head">
               <span className="section-index">03</span>
-              <div><h2>卖点与标签</h2><p>每组变体都会保留这里列出的全部卖点。顺序会被系统重新编排。</p></div>
+              <div><h2>卖点与标签</h2><p>卖点和话题标签均可选；填写的卖点会保留在每组变体中，顺序由系统重新编排。</p></div>
               <span className="form-section__aside">{pointsCount} 个卖点</span>
             </div>
             <div className="form-stack">
               <div className="field">
-                <span className="field__label">菜品卖点 <span className="field__required">至少 1 项</span></span>
+                <span className="field__label">菜品卖点 <span className="field__optional">可选 · 每项最多 120 字，最多 8 项</span></span>
                 <div className="point-editor">
                   {sellingPoints.map((point, index) => (
                     <div className="point-row" key={index}>
@@ -326,7 +327,7 @@ export function NewTask() {
                         placeholder={index === 0 ? '例如：厚切牛肉大火快煎，外焦里嫩还有肉汁' : '继续补充一个具体卖点'}
                         maxLength={120}
                       />
-                      <button type="button" className="point-remove" aria-label="删除卖点" disabled={sellingPoints.length === 1} onClick={() => setSellingPoints((current) => current.filter((_, i) => i !== index))}>
+                      <button type="button" className="point-remove" aria-label="删除卖点" onClick={() => setSellingPoints((current) => current.filter((_, i) => i !== index))}>
                         <Trash2 size={15} />
                       </button>
                     </div>
