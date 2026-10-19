@@ -168,7 +168,8 @@ export async function buildApp() {
     return {
       error: {
         code: normalized.code,
-        message: normalized.statusCode >= 500 ? '服务器开小差了，请稍后再试' : normalized.message,
+        message: normalized.statusCode >= 500 && !normalized.code.startsWith('DIANPING_')
+          ? '服务器开小差了，请稍后再试' : normalized.message,
         details: normalized.details,
         requestId: request.id,
       },

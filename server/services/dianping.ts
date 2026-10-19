@@ -1,5 +1,8 @@
 import { config } from '../config';
 import { AppError, badRequest } from '../lib/errors';
+import { loadDianpingCredential, recordDianpingCheck, usableDianpingCookies } from './dianping-cookies';
+import { fetchDianpingResource } from './dianping-fetch';
+import { parseDianpingPage } from './dianping-page';
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const IMAGE_HOSTS = ['meituan.net', 'dpfile.com'];
@@ -60,7 +63,7 @@ function parserBase(): string {
   if (!raw) throw new AppError(503, 'DIANPING_PARSER_UNCONFIGURED', '大众点评解析服务尚未配置');
   try {
     const url = new URL(raw);
-    const local = ['127.0.0.1', 'localhost'].includes(url.hostname);
+    const local = ['127.0.0.1', 'localhost', 'host.docker.internal'].includes(url.hostname);
     if (!url.username && !url.password && !url.search && !url.hash
       && (url.protocol === 'https:' || (local && url.protocol === 'http:'))
       && url.pathname.endsWith('/api/v1')) return url.toString().replace(/\/$/, '');
@@ -95,7 +98,7 @@ async function fetchCover(base: string, sourceUrl: string): Promise<{ base64: st
   return { base64: Buffer.concat(chunks, size).toString('base64'), mimeType };
 }
 
-export async function importDianping(text: string): Promise<DianpingImport> {
+async function importLegacyDianping(text: string): Promise<DianpingImport> {
   const sourceUrl = extractDianpingUrl(text);
   const base = parserBase();
   let response: Response;
@@ -108,7 +111,7 @@ export async function importDianping(text: string): Promise<DianpingImport> {
       redirect: 'manual',
     });
   } catch {
-    throw new AppError(502, 'DIANPING_PARSER_UNAVAILABLE', '无法连接大众点评解析服务');
+    throw new AppError(502, 'DIANPING_PARSER_UNAVAILABLE', '解析服务不可用，请联系管理员导入大众点评 Cookie');
   }
   let payload: ParserPayload;
   try {
@@ -117,7 +120,7 @@ export async function importDianping(text: string): Promise<DianpingImport> {
     throw new AppError(502, 'DIANPING_PARSER_INVALID', '解析服务返回了无效数据');
   }
   if (!response.ok || payload.succ === false || payload.retcode !== 200) {
-    throw new AppError(502, 'DIANPING_PARSE_FAILED', payload.retdesc?.slice(0, 160) || '大众点评解析失败');
+    throw new AppError(502, 'DIANPING_PARSE_FAILED', '大众点评解析失败，请联系管理员检查登录状态');
   }
   const data = payload.data;
   const title = data?.title?.trim() ?? '';
@@ -139,5 +142,34 @@ export async function importDianping(text: string): Promise<DianpingImport> {
   } catch (error) {
     if (error instanceof AppError) throw error;
     throw new AppError(502, 'DIANPING_IMAGE_FAILED', '首图暂时无法下载');
+  }
+}
+
+interface ImportDependencies {
+  loadCredential?: typeof loadDianpingCredential;
+  recordCheck?: typeof recordDianpingCheck;
+}
+
+export async function importDianping(text: string, dependencies: ImportDependencies = {}): Promise<DianpingImport> {
+  const sourceUrl = extractDianpingUrl(text);
+  const credential = await (dependencies.loadCredential ?? loadDianpingCredential)();
+  if (!credential) {
+    if (config.dianpingParserApiUrl) return importLegacyDianping(text);
+    throw new AppError(409, 'DIANPING_COOKIE_MISSING', '请联系管理员在 API 接入页导入大众点评 Cookie');
+  }
+  const record = dependencies.recordCheck ?? recordDianpingCheck;
+  try {
+    const cookies = usableDianpingCookies(credential.cookies);
+    if (!cookies.length) throw new AppError(409, 'DIANPING_COOKIE_EXPIRED', '大众点评 Cookie 已过期，请联系管理员重新导入');
+    const page = await fetchDianpingResource(sourceUrl, cookies);
+    const note = parseDianpingPage(page.bytes.toString('utf8'), page.url);
+    const cover = await fetchDianpingResource(note.coverUrl, [], true);
+    if (!cover.bytes.length) throw new AppError(502, 'DIANPING_IMAGE_FAILED', '首图内容为空');
+    await record(credential.version, true, '解析成功');
+    return { title: note.title, body: note.body, tags: note.tags, coverBase64: cover.bytes.toString('base64'),
+      coverMimeType: cover.mimeType, sourceUrl };
+  } catch (error) {
+    await record(credential.version, false, '解析失败').catch(() => undefined);
+    throw error;
   }
 }

@@ -225,6 +225,17 @@ CREATE TABLE provider_settings (
   updated_at          timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE dianping_credentials (
+  id                  integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  cookies_ciphertext  text,
+  version             integer NOT NULL DEFAULT 1 CHECK (version > 0),
+  updated_by          uuid REFERENCES users(id),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  last_checked_at     timestamptz,
+  last_check_ok       boolean,
+  last_check_message  text
+);
+
 CREATE TABLE prompt_templates (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   kind       text NOT NULL CHECK (kind IN ('IMAGE', 'COPY')),

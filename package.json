@@ -2,7 +2,7 @@
   "name": "shiwei-content-pool",
   "version": "1.0.0",
   "private": true,
-  "description": "\u62fe\u5473 \u00b7 \u63a2\u5e97\u7d20\u6750\u53d8\u4f53\u751f\u6210\u4e0e\u72ec\u5360\u9886\u53d6\u5185\u5bb9\u6c60",
+  "description": "拾味 · 探店素材变体生成与独占领取内容池",
   "scripts": {
     "dev": "concurrently -k -n api,worker,web -c green,magenta,cyan \"pnpm dev:api\" \"pnpm dev:worker\" \"pnpm dev:web\"",
     "dev:api": "tsx watch server/index.ts",
@@ -17,7 +17,7 @@
     "db:reset": "tsx scripts/reset.ts",
     "acceptance": "tsx scripts/acceptance.ts",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p client/tsconfig.json --noEmit",
-    "test:dianping": "tsx --test server/services/dianping.test.ts",
+    "test:dianping": "tsx --test server/services/dianping.test.ts server/services/dianping-cookies.test.ts server/services/dianping-fetch.test.ts server/services/dianping-page.test.ts",
     "start:migrate": "node dist/server/cli/migrate.js",
     "start:seed": "node dist/server/cli/seed.js",
     "package:handoff": "bash scripts/package-handoff.sh"

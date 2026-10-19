@@ -40,7 +40,7 @@ test('解析标题正文首图并从受信任的媒体代理读取图片', async
     return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 200, headers: { 'content-type': 'image/jpeg' } });
   };
   try {
-    const result = await importDianping('http://dpurl.cn/I6XoFc4z');
+    const result = await importDianping('http://dpurl.cn/I6XoFc4z', { loadCredential: async () => null });
     assert.equal(result.title, '测试餐厅笔记');
     assert.deepEqual(result.tags, ['美食探店', '秋天断层好吃的美食餐厅']);
     assert.equal(result.coverMimeType, 'image/jpeg');
@@ -66,7 +66,7 @@ test('无正文和话题标签的图片笔记仍可导入', async () => {
     return new Response(new Uint8Array([0xff, 0xd8, 0xff]), { status: 200, headers: { 'content-type': 'image/jpeg' } });
   };
   try {
-    const result = await importDianping('http://dpurl.cn/I6XoFc4z');
+    const result = await importDianping('http://dpurl.cn/I6XoFc4z', { loadCredential: async () => null });
     assert.equal(result.body, '');
     assert.deepEqual(result.tags, []);
     assert.equal(calls, 2);

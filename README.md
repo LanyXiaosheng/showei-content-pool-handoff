@@ -22,7 +22,7 @@
 - **内容池 / 我的领取**：预览、标签、剩余可领取；领取后立即下架；ZIP 含 `Group_XX/图片 + 文案.txt`。
 - **管理后台**：任务、内容、用户、邀请、Prompt、API、生成日志、审计日志、Worker 心跳。
 - **端到端验收**：`51/51` 全部通过，报告见 [ACCEPTANCE-REPORT.md](docs/ACCEPTANCE-REPORT.md)。
-- **大众点评链接导入**：提交素材页可粘贴 `dpurl.cn` 或 `m.dianping.com/feeddetail/…`，自动填入标题、首图、正文与页面 `#话题`；正文和原始标签可留空，需另行配置解析服务，导入不会自动提交审核。
+- **大众点评链接导入**：提交素材页可粘贴 `dpurl.cn` 或 `m.dianping.com/feeddetail/…`，自动填入标题、首图、正文与页面 `#话题`；正文和原始标签可留空；管理员可在 API 接入页维护大众点评 Cookie JSON，其他用户直接粘贴链接，导入不会自动提交审核。
 
 ## 角色与核心规则
 
@@ -128,11 +128,22 @@ pnpm dev
 
 `pnpm dev` 同时启动 API、Worker 与 Vite。
 
-### 大众点评解析服务
+### 大众点评 Cookie 维护与解析
 
-「从大众点评导入」由拾味后端调用小生清流解析服务的 `POST /api/v1/parse`，再通过同一服务的 `GET /api/v1/media` 获取首图。支持短链及“分享文案 + 长链接”；长链接中的 `bizType`、`sceneType` 不能被解析服务清除，部分笔记缺少 `bizType` 会跳到错误页。先在解析服务端配置 `DIANPING_COOKIE` 或只读 `DIANPING_COOKIE_FILE`；拾味只配置 `DIANPING_PARSER_API_URL`，**不要在拾味前端或数据库中存 Cookie**。本地可指向 `http://127.0.0.1:8051/api/v1`，生产使用 HTTPS 地址，并先部署含大众点评解析器与媒体代理的新版本。Cookie 过期或笔记不可用时，导入会提示错误，不会生成伪造素材。
+管理员进入 **API 接入 → 大众点评 Cookie 维护**，导入浏览器登录大众点评后导出的 Cookie JSON，支持 Cookie 数组和包含 `cookies` 数组的对象，最大 512 KiB。点击保存后，完整 Cookie 数组使用现有 `ENCRYPTION_KEY` 进行 AES-256-GCM 加密，存入 PostgreSQL；页面只显示条数、已知有效期、更新时间和最近解析结果。Cookie 过期后重新导入即可替换，无需重启。无效 JSON、其他网站 Cookie 或全部过期的导入不会覆盖原配置。
 
-解析后标题、首图以及页面提供的正文和 `#话题` 会填入可编辑表单；`@提及` 不算标签。原始正文与标签可以留空，卖点和素材使用权确认仍需人工完成，原有「提交 → 管理员审核 → 生成」闸门不变。已有数据库需重新执行 `pnpm db:migrate`，放宽原始标签的非空约束。可用 `pnpm test:dianping` 检查链接校验与导入契约。
+导入只表示已保存，**不代表登录已通过验证**。管理员可粘贴一条可访问的笔记链接，点击“测试解析”。普通用户和代理仍在提交素材页粘贴分享文案或链接，后端会读取数据库中最新的 Cookie，预填标题、首图、正文和页面 `#话题`，不需要用户提供 Cookie。`bizType`、`sceneType` 等查询参数保持原样。Cookie 仅发送给匹配域名、路径、协议和有效期的页面请求；首图请求不携带 Cookie。
+
+新增迁移 `003_dianping_credentials` 会由 Docker API 启动自动执行；本机开发需执行 `pnpm db:migrate`。请保留原 `ENCRYPTION_KEY`，否则已保存的 Cookie 无法解密。清除按钮会停止使用已保存的 Cookie。未配置数据库 Cookie 时，仍可使用原 `DIANPING_PARSER_API_URL` 独立服务作为兼容路径；该服务需自行维护登录凭据。
+
+内置页面解析支持结构化 JSON、Qwik 数据和标准 OG 元信息，识别返回 HTTP 200 的登录页，并对登录失效、验证页、笔记不可访问给出提示。真实登录成功页面仍需管理员导入自己的 Cookie 并使用真实笔记完成测试；目前回归验证采用固定测试样本，不把模拟数据当作站点实测。运行 `pnpm test:dianping` 可检查 Cookie 校验、权限、页面提取、域名/重定向边界和共享凭据更新行为。
+
+数据库集成测试使用自动创建并清理的隔离测试库，不改动当前业务库。Docker 运行后可执行：
+
+```powershell
+docker compose --env-file .env.docker cp scripts/test-dianping-cookie.integration.cjs api:/app/test-dianping-cookie.integration.cjs
+docker compose --env-file .env.docker exec -T api node /app/test-dianping-cookie.integration.cjs
+```
 
 ### 演示账号
 

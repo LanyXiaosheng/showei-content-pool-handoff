@@ -5,6 +5,7 @@ import { logger } from '../lib/logger';
 
 const INITIAL_VERSION = '001_initial_schema';
 const OPTIONAL_TAGS_VERSION = '002_optional_task_tags';
+const DIANPING_COOKIES_VERSION = '003_dianping_credentials';
 
 export async function migrate(): Promise<void> {
   await q(`CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -33,6 +34,26 @@ export async function migrate(): Promise<void> {
       await client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [OPTIONAL_TAGS_VERSION]);
     });
     logger.info(`数据库迁移完成：${OPTIONAL_TAGS_VERSION}`);
+  }
+
+  const dianpingCookies = await q<{ version: string }>(
+    'SELECT version FROM schema_migrations WHERE version = $1', [DIANPING_COOKIES_VERSION],
+  );
+  if (!dianpingCookies.rows[0]) {
+    await withTx(async (client) => {
+      await client.query(`CREATE TABLE IF NOT EXISTS dianping_credentials (
+        id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+        cookies_ciphertext text,
+        version integer NOT NULL DEFAULT 1 CHECK (version > 0),
+        updated_by uuid REFERENCES users(id),
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        last_checked_at timestamptz,
+        last_check_ok boolean,
+        last_check_message text
+      )`);
+      await client.query('INSERT INTO schema_migrations (version) VALUES ($1)', [DIANPING_COOKIES_VERSION]);
+    });
+    logger.info(`数据库迁移完成：${DIANPING_COOKIES_VERSION}`);
   }
 }
 

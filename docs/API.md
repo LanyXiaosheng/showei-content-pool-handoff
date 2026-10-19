@@ -128,7 +128,7 @@ Base URL：`/api`（开发时由 Vite 代理到 `http://127.0.0.1:4100`；生产
 
 ### `POST /imports/dianping`（JSON）
 
-代理或普通用户登录后，提交 `{ "text": "大众点评分享文案或 dpurl.cn 链接" }`。服务端调用配置的 `DIANPING_PARSER_API_URL`，仅接受大众点评笔记及受信任图片域名，返回 `title`、`body`、`tags`、`coverBase64`、`coverMimeType`、`sourceUrl`。`tags` 仅包含页面原生 `#话题`，不包含 `@提及`；无正文或话题时返回空值/空数组。首图经解析服务媒体代理读取，最大 12MB；Cookie 不进入浏览器。此接口只预填素材，不创建任务或绕过人工审核。
+代理或普通用户登录后，提交 `{ "text": "大众点评分享文案或 dpurl.cn 链接" }`。服务端优先读取数据库中的共享 Cookie 并解析大众点评页面，未配置时兼容 `DIANPING_PARSER_API_URL`，仅接受大众点评笔记及受信任图片域名，返回 `title`、`body`、`tags`、`coverBase64`、`coverMimeType`、`sourceUrl`。`tags` 仅包含页面原生 `#话题`，不包含 `@提及`；无正文或话题时返回空值/空数组。首图最大 12MB，内置解析直接从受信任图片域下载且不带 Cookie；Cookie 不会返回用户浏览器。此接口只预填素材，不创建任务或绕过人工审核。
 
 ### `POST /tasks`（multipart/form-data）
 
@@ -379,3 +379,12 @@ Base URL：`/api`（开发时由 Vite 代理到 `http://127.0.0.1:4100`；生产
 ```
 
 系统会对返回图强制做 900×1200 裁切、机检与相似度比较。
+
+## 大众点评 Cookie（仅管理员）
+
+- `GET /api/admin/dianping-cookie`：摘要 `configured/cookieCount/usableCookieCount/expiresAt/updatedAt/lastCheckedAt/lastCheckOk/lastCheckMessage`，不含 Cookie 原值、密文、域名或 Cookie 名。
+- `PUT /api/admin/dianping-cookie`：JSON 请求体 `{cookieJson: string}`，字符串内容为浏览器 Cookie 数组或 `{cookies: [...]}`；最大 512 KiB，成功返回摘要。验证失败 400，不更改旧值。
+- `DELETE /api/admin/dianping-cookie`：清除凭据并返回未配置摘要。
+- `POST /api/admin/dianping-cookie/test`：请求 `{text: string}`，真实调用共享 Cookie 解析，成功返回 `{data:{ok:true,title,message}}`，不创建素材或任务。未导入返回 409；限制 8 次/10 分钟。
+
+以上接口未登录返回 401，普通用户与代理返回 403。到期摘要仅表示已知有效期上限；包含会话 Cookie 时为空。导入后 lastCheckOk=null，只有实际解析才记录检查结果。Cookie 校验接受 `name/value/domain/path/secure/hostOnly/expirationDate` 或 `expires`，按域名过滤，并拒绝头注入；负数有效期作为会话 Cookie。所有请求沿用现有 Origin 校验。

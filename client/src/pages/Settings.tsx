@@ -6,6 +6,7 @@ import { ApiError, api } from '@/api/client';
 import type { ProviderSummary } from '@/api/types';
 import { Badge, Button, ErrorBlock, Field, Input, LoadingBlock, PageHeader, Panel, SectionHeader, Select, Toggle } from '@/components/ui';
 import { formatDateTime } from '@/lib/format';
+import { DianpingCookieSettings } from '@/components/DianpingCookieSettings';
 
 export function Settings() {
   const query = useQuery({
@@ -17,10 +18,11 @@ export function Settings() {
     <div className="page settings-page">
       <PageHeader
         eyebrow="PROVIDER SETTINGS · 外部 API"
-        title="接入生成的大脑与画笔。"
-        description="支持 OpenAI-compatible 的文案与图生图接口。密钥使用 AES-256-GCM 加密后落库，接口只返回掩码，任何代理或普通用户都无法访问本页。"
+        title="管理生成接口与解析凭证。"
+        description="接入文案与图生图 API，并统一维护大众点评解析 Cookie。凭证加密保存到数据库，仅管理员可以维护；其他用户直接粘贴笔记链接即可解析。"
         actions={<span className="api-security"><ShieldCheck size={15} /> 仅管理员</span>}
       />
+      <DianpingCookieSettings />
       <div className="notice notice--amber">
         <AlertTriangle size={17} />
         <div><strong>演示生成器不是真实 AI。</strong>默认配置使用本地变体适配器以便验收流程。接入真实生图/文案 API 后，请在上方切换 Provider 并填写密钥；系统会走同一套超时、重试、质量与相似度卡口。</div>
