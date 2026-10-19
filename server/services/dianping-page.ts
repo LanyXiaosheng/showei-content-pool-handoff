@@ -125,7 +125,32 @@ function noteTags(data: DataObject): string[] {
   for (const key of TAG_SOURCE_KEYS) {
     if (key in data) collectTagValues(data[key], values);
   }
+  for (const key of ['richContent', 'richContentExpanded']) {
+    if (!(key in data)) continue;
+    let content = data[key];
+    if (typeof content === 'string') {
+      try { content = JSON.parse(content); } catch { continue; }
+    }
+    collectRichTopicTags(content, values);
+  }
   return values;
+}
+
+function collectRichTopicTags(value: unknown, output: string[]): void {
+  const content = object(value);
+  const blocks = content?.richtextlist ?? content?.richTextList;
+  if (!Array.isArray(blocks)) return;
+  for (const item of blocks) {
+    const block = object(item);
+    const tagText = block?.text;
+    const link = block?.lk ?? block?.link ?? block?.href;
+    if (typeof tagText !== 'string' || typeof link !== 'string'
+      || !/TopicAggregation/i.test(link) || !/[?&]topicid=\d+/i.test(link)) continue;
+    for (const match of tagText.matchAll(/[#＃]([^#＃\s，。！？、,;:：（）()]{1,60})/gu)) {
+      const tag = text(match[1]).replace(/^[#＃]+/, '').trim();
+      if (tag && !tag.startsWith('@')) output.push(tag);
+    }
+  }
 }
 
 function imageUrl(value: unknown, depth = 0): string {
@@ -153,7 +178,7 @@ function candidate(data: DataObject): NoteData {
   const title = firstString(data, ['noteTitle', 'feedTitle', 'title', 'headline', 'subject']);
   const body = firstString(data, ['noteContent', 'feedContent', 'articleBody', 'content', 'desc', 'description', 'text']);
   let coverUrl = '';
-  for (const name of ['coverUrl', 'cover_url', 'picList', 'imageList', 'images', 'image', 'pictures', 'pics', 'photoList']) {
+  for (const name of ['coverUrl', 'cover_url', 'picUrl', 'picList', 'imageList', 'feedPicList', 'images', 'image', 'pictures', 'pics', 'photoList']) {
     coverUrl = imageUrl(data[name]); if (coverUrl) break;
   }
   const tags = noteTags(data);
@@ -170,7 +195,7 @@ function findNote(roots: unknown[], expectedId: string): NoteData | null {
     if (Array.isArray(current)) { queue.push(...current.slice(0, 500)); continue; }
     const data = current as DataObject; const note = candidate(data);
     const article = /Article|BlogPosting|SocialMediaPosting/.test(String(data['@type']));
-    const identifier = data.noteId ?? data.feedId ?? data.id;
+    const identifier = data.noteId ?? data.feedId ?? data.mainId ?? data.id;
     const exactNote = Boolean(expectedId && String(identifier) === expectedId);
     const noteFields = 'noteTitle' in data || 'feedTitle' in data || 'noteContent' in data;
     const wrongNote = Boolean(expectedId && identifier !== undefined && String(identifier) !== expectedId);

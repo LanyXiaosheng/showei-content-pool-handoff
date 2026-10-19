@@ -45,6 +45,23 @@ test('标签对象容器只读取标签名字段并清理前缀、重复及@项'
   assert.deepEqual(result.tags, ['招牌菜', '氛围舒适']);
 });
 
+test('读取大众点评真实Qwik笔记字段与richContent中带话题链接的标签', () => {
+  const richContent = JSON.stringify({ richtextlist: [
+    { text: '店内用餐体验。' },
+    { text: '#入秋贴秋膘吃点好的 ', lk: 'dianping://picassobox?picassoid=ContentPicasso/TopicAggregation-bundle.js&topicid=32055612' },
+    { text: '#入秋聚餐去哪儿吃 ', lk: 'dianping://picassobox?picassoid=ContentPicasso/TopicAggregation-bundle.js&topicid=32327884' },
+    { text: '普通文案里的 #正文话题 ', lk: 'dianping://picassobox?picassoid=ContentPicasso/Other-bundle.js' },
+  ] });
+  const html = '<script type="qwik/json">' + JSON.stringify({ objs: [
+    { feedType: 29, mainId: '1', title: '2', content: '3', picUrl: '4', richContent: '5' },
+    '532022404', '个人认为是上海目前最好吃的(建议空腹来)', '入秋工作日约同事聚餐，粤菜口味不错。',
+    'https://qcloud.dpfile.com/pc/fixture.jpg', richContent,
+  ] }) + '</script>';
+  const result = parseDianpingPage(html, 'https://m.dianping.com/feeddetail/532022404?bizType=29');
+  assert.deepEqual(result.tags, ['入秋贴秋膘吃点好的', '入秋聚餐去哪儿吃']);
+  assert.equal(result.coverUrl, 'https://qcloud.dpfile.com/pc/fixture.jpg');
+});
+
 test('Qwik对象引用按base36解码，数字字符串叶值不会再次解引用且循环安全', () => {
   const data = { objs: [
     { noteTitle: '1', noteContent: '2', imageList: '3', noteId: '5', cycle: '6' },
