@@ -1,0 +1,73 @@
+name: shiwei-content-pool
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shiwei}
+      POSTGRES_USER: ${POSTGRES_USER:-shiwei}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env.docker 中设置 POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shiwei} -d ${POSTGRES_DB:-shiwei}"]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+
+  api:
+    image: shiwei-content-pool:latest
+    build: .
+    restart: unless-stopped
+    command: ["sh", "-c", "node dist/server/cli/migrate.js && node dist/server/index.js"]
+    environment:
+      NODE_ENV: production
+      PORT: 4100
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:4100}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shiwei}:${POSTGRES_PASSWORD:?请在 .env.docker 中设置 POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-shiwei}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?请设置 32 字节 base64 加密密钥}
+      DATA_DIR: /app/data
+      WEB_DIST: /app/dist/web
+      SESSION_TTL_DAYS: ${SESSION_TTL_DAYS:-7}
+      DEMO_MODE: ${DEMO_MODE:-false}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@shiwei.local}
+      DEMO_PASSWORD: ${SEED_PASSWORD:-change-me-before-production}
+      WORKER_POLL_MS: ${WORKER_POLL_MS:-800}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DIANPING_PARSER_API_URL: ${DIANPING_PARSER_API_URL:-}
+    ports:
+      - "127.0.0.1:${APP_PORT:-4100}:4100"
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4100/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  worker:
+    image: shiwei-content-pool:latest
+    build: .
+    restart: unless-stopped
+    command: ["node", "dist/server/worker.js"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-shiwei}:${POSTGRES_PASSWORD:?请在 .env.docker 中设置 POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-shiwei}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?请设置 32 字节 base64 加密密钥}
+      DATA_DIR: /app/data
+      WORKER_POLL_MS: ${WORKER_POLL_MS:-800}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - app_data:/app/data
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pg_data:
+  app_data:

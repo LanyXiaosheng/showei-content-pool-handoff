@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "rootDir": "server",
+    "outDir": "dist/server",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["server/**/*.ts"],
+  "exclude": ["server/**/*.test.ts"]
+}

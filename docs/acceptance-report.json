@@ -1,0 +1,335 @@
+{
+  "startedAt": "2026-10-18T03:31:45.101Z",
+  "finishedAt": "2026-10-18T03:31:55.555Z",
+  "durationSeconds": 10.5,
+  "baseUrl": "http://127.0.0.1:4200",
+  "runId": "MVD9R4NH",
+  "summary": {
+    "total": 51,
+    "passed": 51,
+    "failed": 0
+  },
+  "metrics": {
+    "taskNo": "T261018-E1CC",
+    "contentPoolBefore": 0,
+    "generationSeconds": 9.1,
+    "groupCount": 10,
+    "contentPoolAfter": 10,
+    "zipBytes": 157790,
+    "imageCount": 10,
+    "averageCopyLength": 226,
+    "maxTextSimilarity": 0.4887,
+    "maxImageCorrelation": 0.7984,
+    "minImageCorrelation": 0.091,
+    "claimedGroup": "SW-261018-E1CC-01",
+    "concurrentWinner": "user A"
+  },
+  "checks": [
+    {
+      "group": "环境",
+      "name": "API 与数据库健康",
+      "passed": true,
+      "detail": "status=ok, db=ok"
+    },
+    {
+      "group": "环境",
+      "name": "生成 Worker 在线",
+      "passed": true,
+      "detail": "worker=online, lastSeen=2026-10-18T03:31:45.065Z"
+    },
+    {
+      "group": "权限",
+      "name": "三级角色均可登录",
+      "passed": true,
+      "detail": "管理员 / 代理 / 用户 A / 用户 B"
+    },
+    {
+      "group": "任务流程",
+      "name": "代理提交任务后状态为待审核",
+      "passed": true,
+      "detail": "taskNo=T261018-E1CC, status=PENDING_REVIEW"
+    },
+    {
+      "group": "任务流程",
+      "name": "审核前无生成队列",
+      "passed": true,
+      "detail": "job=null"
+    },
+    {
+      "group": "任务流程",
+      "name": "审核前不调用生成 API、不产生内容",
+      "passed": true,
+      "detail": "{\"available\":0,\"claimed\":0,\"withdrawn\":0,\"generatedImages\":0}"
+    },
+    {
+      "group": "任务流程",
+      "name": "审核前公共池没有该任务内容",
+      "passed": true,
+      "detail": "content=0"
+    },
+    {
+      "group": "任务流程",
+      "name": "管理员审核通过后进入排队",
+      "passed": true,
+      "detail": "status=QUEUED"
+    },
+    {
+      "group": "任务流程",
+      "name": "10 组全部生成完成",
+      "passed": true,
+      "detail": "status=COMPLETED, available=10, 用时=9.1s"
+    },
+    {
+      "group": "可观测性",
+      "name": "生成日志记录了启动、逐组生成和完成",
+      "passed": true,
+      "detail": "JOB_SUCCEEDED, GROUP_GENERATED, IMAGE_DUPLICATE_REJECTED, JOB_STARTED"
+    },
+    {
+      "group": "权限",
+      "name": "任务日志不向代理泄漏 Prompt 变体参数",
+      "passed": true,
+      "detail": "meta sanitized for non-admin"
+    },
+    {
+      "group": "内容池",
+      "name": "10 组内容全部进入内容池",
+      "passed": true,
+      "detail": "groups=10"
+    },
+    {
+      "group": "内容池",
+      "name": "内容初始状态为可领取",
+      "passed": true,
+      "detail": "AVAILABLE"
+    },
+    {
+      "group": "内容池",
+      "name": "公共池可领取数量增加 10",
+      "passed": true,
+      "detail": "0 → 10"
+    },
+    {
+      "group": "核心规则",
+      "name": "提交任务的代理不会自动获得成品",
+      "passed": true,
+      "detail": "agent library total=0"
+    },
+    {
+      "group": "输出打包",
+      "name": "每组 ZIP 含 Group_XX 文件夹、图片与独立 txt",
+      "passed": true,
+      "detail": "已校验 10 个 ZIP"
+    },
+    {
+      "group": "图片",
+      "name": "全部变体图强制输出 900×1200（3:4）",
+      "passed": true,
+      "detail": "images=10, ratio=0.75"
+    },
+    {
+      "group": "文案",
+      "name": "10 份文案三段式、保留全部卖点、标题/标签组合唯一",
+      "passed": true,
+      "detail": "平均 226 字，最大相似度 0.4887"
+    },
+    {
+      "group": "文案",
+      "name": "文案差异明显，无大面积重复",
+      "passed": true,
+      "detail": "max 4-gram Jaccard = 0.489（阈值 0.80）"
+    },
+    {
+      "group": "图片",
+      "name": "不存在高度雷同图片",
+      "passed": true,
+      "detail": "最大空间相关=0.798（阈值 0.985），最小=0.091"
+    },
+    {
+      "group": "领取核验",
+      "name": "用户 A 可成功领取第 1 组",
+      "passed": true,
+      "detail": "SW-261018-E1CC-01 → user A"
+    },
+    {
+      "group": "领取核验",
+      "name": "领取后内容进入用户 A 的「我的领取」",
+      "passed": true,
+      "detail": "library total=1"
+    },
+    {
+      "group": "领取核验",
+      "name": "用户 B 看不到已被领取的组",
+      "passed": true,
+      "detail": "GET /pool/:id → 404"
+    },
+    {
+      "group": "领取核验",
+      "name": "用户 B 无法重复领取",
+      "passed": true,
+      "detail": "409 CONTENT_TAKEN"
+    },
+    {
+      "group": "核心规则",
+      "name": "已领取内容立刻从公共池下架",
+      "passed": true,
+      "detail": "available=9"
+    },
+    {
+      "group": "并发领取",
+      "name": "两名用户并发抢同一组，只有一人成功",
+      "passed": true,
+      "detail": "200×1, 409×1, winner=user A"
+    },
+    {
+      "group": "下载",
+      "name": "领取人可下载 ZIP",
+      "passed": true,
+      "detail": "status=200, bytes=157790"
+    },
+    {
+      "group": "下载",
+      "name": "非领取人无法下载",
+      "passed": true,
+      "detail": "status=403"
+    },
+    {
+      "group": "下载",
+      "name": "ZIP 包含 Group_XX 图片与文案",
+      "passed": true,
+      "detail": "Group_01/文案.txt, Group_01/image_01.jpg"
+    },
+    {
+      "group": "权限",
+      "name": "领取后图片媒体资源仅领取人可访问",
+      "passed": true,
+      "detail": "owner=200, other=404"
+    },
+    {
+      "group": "权限",
+      "name": "代理/普通用户无法访问 API 密钥与 Prompt",
+      "passed": true,
+      "detail": "403 × 3"
+    },
+    {
+      "group": "权限",
+      "name": "普通用户没有邀请入口/能力",
+      "passed": true,
+      "detail": "403"
+    },
+    {
+      "group": "权限",
+      "name": "API 密钥仅返回掩码，不返回密文/明文",
+      "passed": true,
+      "detail": "providers=2, masked=true"
+    },
+    {
+      "group": "权限",
+      "name": "任务接口不泄漏 Prompt 内容",
+      "passed": true,
+      "detail": "done"
+    },
+    {
+      "group": "权限",
+      "name": "Prompt 管理接口仅管理员可用",
+      "passed": true,
+      "detail": "prompt versions=2"
+    },
+    {
+      "group": "邀请",
+      "name": "代理在开关开启时可创建普通用户邀请码",
+      "passed": true,
+      "detail": "code=EV8UCNAR9Z"
+    },
+    {
+      "group": "邀请",
+      "name": "代理不能邀请代理",
+      "passed": true,
+      "detail": "403"
+    },
+    {
+      "group": "邀请",
+      "name": "管理员关闭邀请开关后代理不能创建，已有码暂停",
+      "passed": true,
+      "detail": "valid before=true, after=false"
+    },
+    {
+      "group": "邀请",
+      "name": "邀请码注册成功且角色由邀请决定",
+      "passed": true,
+      "detail": "email=accept-mvd9r4nh@shiwei.local, role=USER"
+    },
+    {
+      "group": "邀请",
+      "name": "通过邀请注册的普通用户仍无邀请能力",
+      "passed": true,
+      "detail": "403"
+    },
+    {
+      "group": "邀请",
+      "name": "管理员可邀请代理，新代理默认无邀请权限",
+      "passed": true,
+      "detail": "email=agent-mvd9r4nh@shiwei.local, role=AGENT, inviteEnabled=false"
+    },
+    {
+      "group": "邀请",
+      "name": "管理员开通后代理才能邀请普通用户",
+      "passed": true,
+      "detail": "blocked=403, afterGrant=USER"
+    },
+    {
+      "group": "审核",
+      "name": "管理员驳回任务并填写理由",
+      "passed": true,
+      "detail": "status=REJECTED"
+    },
+    {
+      "group": "审核",
+      "name": "被驳回任务不产生内容、不调用生成",
+      "passed": true,
+      "detail": "content=0"
+    },
+    {
+      "group": "通知",
+      "name": "驳回结果通知提交者",
+      "passed": true,
+      "detail": "notifications=3"
+    },
+    {
+      "group": "状态",
+      "name": "管理员可作废任务",
+      "passed": true,
+      "detail": "withdrawn=0"
+    },
+    {
+      "group": "Prompt",
+      "name": "管理员可创建/激活/删除版本，历史版本不受影响",
+      "passed": true,
+      "detail": "created=85755f8b-d7f1-461c-be4e-d1d86886293d, restored=v1"
+    },
+    {
+      "group": "账号",
+      "name": "管理员可直接创建普通用户并返回一次性密码",
+      "passed": true,
+      "detail": "email=direct-mvd9r4nh@shiwei.local"
+    },
+    {
+      "group": "账号",
+      "name": "直建账号可用临时密码登录",
+      "passed": true,
+      "detail": "login=200"
+    },
+    {
+      "group": "账号",
+      "name": "停用账号无法登录",
+      "passed": true,
+      "detail": "login=403"
+    },
+    {
+      "group": "权限",
+      "name": "未登录访问受保护接口被拒绝",
+      "passed": true,
+      "detail": "status=401"
+    }
+  ]
+}
